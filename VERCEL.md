@@ -41,7 +41,8 @@ Depois de publicar o backend pelo [guia Oracle](COMECE-AQUI.md), abra o projeto 
 
 | Variável | De onde vem |
 |---|---|
-| `SGA_BASE_URL` | URL HTTPS da instalação Oracle, sem `/login`, `/api` ou outro caminho |
+| `SGA_BASE_URL` | URL da instalação Oracle, sem `/login`, `/api` ou outro caminho; pode incluir uma porta |
+| `SGA_ALLOW_HTTP` | `false` para HTTPS; `true` para aceitar um backend HTTP por escolha explícita |
 | `SGA_CLIENT_ID` | Seção `mangati.client_id` do arquivo privado `credenciais.json` da VM |
 | `SGA_CLIENT_SECRET` | Seção `mangati.client_secret` do mesmo arquivo |
 | `SGA_USERNAME` | `totem` |
@@ -54,6 +55,19 @@ Depois de publicar o backend pelo [guia Oracle](COMECE-AQUI.md), abra o projeto 
 | `COOKIE_SECRET` | Outro segredo aleatório, com pelo menos 32 caracteres |
 
 O cliente OAuth criado pelo pacote pode atender a ambas as interfaces com usuários diferentes. Se preferir isolar as integrações, crie um cliente OAuth específico na administração `/admin/api/` e use seus dados na Vercel. Não use o login `admin` no totem.
+
+### Conexão HTTP escolhida para esta instalação
+
+O endereço `http://147.15.87.164:8088` foi conferido e abre a tela de login do NovoSGA CE. Para usar essa instalação sem alterar seu HTTP, cadastre na Vercel:
+
+```text
+SGA_BASE_URL=http://147.15.87.164:8088
+SGA_ALLOW_HTTP=true
+```
+
+O navegador acessa o frontend em HTTPS e a função Vercel chama o backend em HTTP. Esse segundo trecho transmite usuário, senha, Client Secret e token sem criptografia. As credenciais continuam fora do JavaScript do navegador, mas não ficam protegidas durante esse trânsito. A opção HTTP é desativada por padrão e só funciona com `SGA_ALLOW_HTTP=true`.
+
+Caso esta VM tenha sido instalada por outro método, crie o cliente OAuth em `http://147.15.87.164:8088/admin/api/` e cadastre um usuário específico `totem`, com vínculo à unidade e ao módulo de triagem. Nesse caso, obtenha as senhas e IDs na instalação existente: o arquivo `credenciais.json` deste pacote não terá sido gerado lá automaticamente.
 
 Os IDs são os números exibidos nos cadastros da instalação; **não presuma que todos serão 1**. Na VM, o marcador `metadata` de namespace `riobranco`, nome `instalacao.v1`, também guarda os IDs de unidade e serviços após a instalação.
 
@@ -91,8 +105,8 @@ Emita pelo totem, chame na recepção e confira número, guichê e áudio na TV.
 | Repositório não aparece | Permissão da integração GitHub/Vercel para o repositório privado |
 | Build procura Docker/PHP ou não encontra `package.json` | Root Directory precisa ser `frontend` |
 | Página ou `/api/atendimento` retorna 404 | Framework Other, saída `public`, raiz `frontend`; depois Redeploy |
-| Tela abre, mas emissão está desativada | Variáveis completas em Production, HTTPS, IDs positivos, tamanhos dos dois segredos e novo deploy |
-| Código é aceito, mas ativação falha | Credenciais OAuth/usuário e acesso HTTPS ao backend Oracle |
+| Tela abre, mas emissão está desativada | Variáveis completas em Production, protocolo HTTPS ou HTTP explicitamente autorizado, IDs positivos, tamanhos dos dois segredos e novo deploy |
+| Código é aceito, mas ativação falha | Credenciais OAuth/usuário e acesso ao backend Oracle |
 | Senha aparece sem imprimir | Impressora padrão, driver Windows e permissões de impressão do navegador |
 | Falha após clicar para emitir | Conferir a fila no NovoSGA antes de recarregar e tentar novamente |
 

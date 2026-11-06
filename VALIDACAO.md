@@ -41,7 +41,8 @@ O backend foi preparado para Oracle Always Free + DuckDNS, com Mangati para a TV
 
 - Tela de emissão Normal/Prioritário na pasta `frontend`, com impressão/reimpressão pelo navegador e mensagem explícita de indisponibilidade quando o backend ainda não está configurado.
 - Dez testes Node aprovados: configuração ausente/inválida; origem e código inválidos; autenticação de equipamento; cookie protegido sem credenciais; cookie/CSRF ausentes ou inválidos; emissão Normal e Prioritário somente nos IDs autorizados; falha de comunicação sem repetição automática; sessão adulterada/expirada e rotação de código; resposta inválida sem número fictício.
+- Dois testes adicionais para HTTP explícito: IP/porta, autenticação/emissão e cookie público Secure; recusa de protocolos diferentes e valores ambíguos. Total: doze testes Node. O teste usa backend simulado, sem credenciais reais.
 - `npm run build` aprovado e arquivos necessários à publicação verificados. Sem dependências externas de produção.
 - Prévia local conferida visualmente no navegador: tela do laboratório, botões desativados e mensagem de emissão não ativada sem backend configurado.
 - A API do frontend foi exercitada com backend simulado. Emissões e impressão reais ainda não foram executadas contra a Oracle/Elgin.
-- O deploy Vercel será realizado manualmente pelo usuário, conforme `VERCEL.md`. Não há URL Vercel publicada nesta sessão.
+- O usuário publicou manualmente `https://novosga-rio-branco-frontend.vercel.app/`: página e `/api/atendimento` responderam HTTP 200, com `configured: false`. A instalação Oracle em `http://147.15.87.164:8088` também respondeu HTTP 200 e redirecionou ao login NovoSGA CE. Nenhuma autenticação nessa instalação foi realizada pelo assistente.

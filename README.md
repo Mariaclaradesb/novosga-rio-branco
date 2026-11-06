@@ -4,7 +4,9 @@ Pacote de implantação do **NovoSGA open source 2.3.4**, com PostgreSQL e HTTPS
 
 O **frontend do totem para a Vercel** está na pasta `frontend`. Para importar manualmente, siga [VERCEL.md](VERCEL.md): Framework **Other**, Root Directory **frontend**, build **npm run build**, saída **public**. É possível publicar a tela antes de configurar a Oracle; a emissão permanece desativada até conectar o backend.
 
-**Estado:** preparado para implantação futura. Ainda não há VM ou domínio configurados. Os testes locais de cadastros e OAuth passaram; a stack Docker ARM e o fluxo nos equipamentos precisam ser homologados após o deploy. Consulte [VALIDACAO.md](VALIDACAO.md).
+A conexão ao backend usa HTTPS por padrão. Para a instalação HTTP escolhida pelo usuário, configure `SGA_ALLOW_HTTP=true`, conforme o guia; nesse modo o trecho entre Vercel e NovoSGA transmite as credenciais sem criptografia.
+
+**Estado:** o usuário publicou o frontend na Vercel e informou uma instalação NovoSGA CE existente na Oracle em HTTP. A página de login do backend foi conferida; credenciais, IDs e emissão real ainda precisam ser conectados e homologados. Os testes locais do pacote passaram, mas não substituem a validação da instalação Oracle e dos equipamentos. Consulte [VALIDACAO.md](VALIDACAO.md).
 
 ## O que o instalador configura
 

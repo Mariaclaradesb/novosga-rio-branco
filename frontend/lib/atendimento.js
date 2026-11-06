@@ -13,7 +13,8 @@ function configuration(env) {
   if (REQUIRED.some(name => !env[name]?.trim())) return null;
   let base;
   try { base = new URL(env.SGA_BASE_URL); } catch { return null; }
-  if (base.protocol !== 'https:' || base.username || base.password || base.search || base.hash ||
+  const allowedProtocol = base.protocol === 'https:' || (base.protocol === 'http:' && env.SGA_ALLOW_HTTP === 'true');
+  if (!allowedProtocol || base.username || base.password || base.search || base.hash ||
       base.pathname !== '/' || env.COOKIE_SECRET.length < 32 || env.KIOSK_ACCESS_CODE.length < 16) return null;
   const ids = [env.SGA_UNIT_ID, env.SGA_SERVICE_ID, env.SGA_NORMAL_PRIORITY_ID, env.SGA_PRIORITY_ID];
   if (ids.some(value => !/^[1-9]\d{0,8}$/.test(value))) return null;

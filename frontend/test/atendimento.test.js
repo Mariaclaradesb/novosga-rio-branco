@@ -36,8 +36,31 @@ test('sem configuracao, a pagina informa indisponibilidade e nao emite senha', a
   assert.equal((await invoke(handler, { method: 'POST', data: { action: 'emit', priority: 'normal' } })).status, 503);
 });
 
-test('URL sem HTTPS e IDs invalidos desativam a emissao', async () => {
+test('HTTP sem autorizacao explicita e configuracao invalida desativam a emissao', async () => {
   for (const change of [{ SGA_BASE_URL: 'http://sga.example.org' }, { SGA_BASE_URL: 'https://sga.example.org/login' }, { SGA_UNIT_ID: '1;delete' }, { COOKIE_SECRET: 'curto' }]) {
+    const handler = createHandler({ env: { ...environment(), ...change } });
+    assert.equal((await invoke(handler)).body.configured, false);
+  }
+});
+
+test('HTTP explicito aceita IP e porta e preserva cookie HTTPS e escopo da emissao', async () => {
+  const env = { ...environment(), SGA_BASE_URL: 'http://198.51.100.42:8088', SGA_ALLOW_HTTP: 'true' };
+  const calls = []; const handler = createHandler({ env, request: backend(calls) });
+  const auth = await authorize(handler, env);
+  assert.match(auth.result.headers['Set-Cookie'], /; Secure$/);
+  const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority: 'normal', csrf: auth.csrf } });
+  assert.equal(result.status, 201);
+  assert.equal(calls[0].url, 'http://198.51.100.42:8088/api/token');
+  assert.equal(calls[1].url, 'http://198.51.100.42:8088/api/distribui');
+  assert.deepEqual(JSON.parse(calls[1].options.body), { unidade: 3, servico: 8, prioridade: 1 });
+});
+
+test('permissao HTTP nao aceita outros protocolos nem ativacao ambigua', async () => {
+  for (const change of [
+    { SGA_BASE_URL: 'ftp://sga.example.org', SGA_ALLOW_HTTP: 'true' },
+    { SGA_BASE_URL: 'http://sga.example.org', SGA_ALLOW_HTTP: 'false' },
+    { SGA_BASE_URL: 'http://sga.example.org', SGA_ALLOW_HTTP: 'TRUE' },
+  ]) {
     const handler = createHandler({ env: { ...environment(), ...change } });
     assert.equal((await invoke(handler)).body.configured, false);
   }
