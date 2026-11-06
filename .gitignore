@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+credenciais.json
+credenciais-*.json
+backups/
+__pycache__/
+*.pyc
+*.pem
+*.key

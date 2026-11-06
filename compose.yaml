@@ -1,0 +1,164 @@
+name: laboratorio-rio-branco
+
+x-app-environment: &app-environment
+  APP_ENV: prod
+  APP_DEBUG: "0"
+  APP_LANGUAGE: pt_BR
+  APP_SECRET: ${APP_SECRET:?Execute python3 gerenciar.py preparar}
+  TZ: America/Rio_Branco
+  DEFAULT_URI: https://${SGA_DOMAIN:?Informe o dominio}
+  DATABASE_URL: postgresql://novosga:${DB_PASSWORD:?Gere as credenciais}@db:5432/novosga?serverVersion=16&charset=utf8
+  MESSENGER_TRANSPORT_DSN: doctrine://default?auto_setup=0
+  MAILER_DSN: null://null
+  MERCURE_URL: http://novosga:8080/.well-known/mercure
+  MERCURE_PUBLIC_URL: https://${SGA_DOMAIN}/.well-known/mercure
+  MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:?Gere as credenciais}
+  MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET}
+  OAUTH_PRIVATE_KEY: /run/novosga-jwt/private.pem
+  OAUTH_PUBLIC_KEY: /run/novosga-jwt/public.pem
+  OAUTH_PASSPHRASE: ${OAUTH_PASSPHRASE:?Gere as credenciais}
+  OAUTH_ENCRYPTION_KEY: ${OAUTH_ENCRYPTION_KEY:?Gere as credenciais}
+
+x-app: &app
+  image: ${SGA_IMAGE:-novosga/novosga:2.3.4}
+  platform: ${SGA_PLATFORM:-linux/amd64}
+  pull_policy: ${SGA_PULL_POLICY:-missing}
+  restart: unless-stopped
+  environment: *app-environment
+  networks: [backend]
+  # A imagem base tem um healthcheck HTTP; os processos CLI nao servem HTTP.
+  healthcheck:
+    disable: true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: novosga
+      POSTGRES_USER: novosga
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Gere as credenciais}
+      TZ: America/Rio_Branco
+    volumes:
+      - database:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U novosga -d novosga"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+
+  init:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile.native
+      args:
+        SOURCE_SHA256: 41c6489947a390c8ca7e9343c11b0558d4e97a7d357a1186cc25a9c56064db24
+    restart: "no"
+    user: "0:0"
+    environment:
+      <<: *app-environment
+      NOVOSGA_ADMIN_USERNAME: admin
+      NOVOSGA_ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Gere a senha inicial}
+      NOVOSGA_ADMIN_FIRSTNAME: Equipe
+      NOVOSGA_ADMIN_LASTNAME: Rio Branco
+      NOVOSGA_UNITY_NAME: Laboratório Rio Branco
+      NOVOSGA_UNITY_DESCRIPTION: Unidade principal do laboratório
+      NOVOSGA_UNITY_TIMEZONE: America/Rio_Branco
+      NOVOSGA_NOPRIORITY_NAME: Normal
+      NOVOSGA_NOPRIORITY_DESCRIPTION: Atendimento sem prioridade
+      NOVOSGA_PRIORITY_NAME: Prioridade
+      NOVOSGA_PRIORITY_DESCRIPTION: Atendimento prioritário
+      NOVOSGA_PLACE_NAME: Guichê
+    command: [php, /deploy/inicializar.php]
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - oauth_keys:/run/novosga-jwt
+      - uploads:/app/public/uploads
+      - scheduler_state:/var/lib/novosga
+      - ./config/inicializar.php:/deploy/inicializar.php:ro
+      - ./config/configurar-laboratorio.php:/deploy/configurar-laboratorio.php:ro
+      - ./config/laboratorio.php:/deploy/laboratorio.php:ro
+      - ./credenciais.json:/deploy/credenciais.json:ro
+      - ./config/proxy.yaml:/app/config/packages/deployment.yaml:ro
+
+  novosga:
+    <<: *app
+    command: [sh, /deploy/iniciar-web.sh]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    volumes:
+      - oauth_keys:/run/novosga-jwt:ro
+      - uploads:/app/public/uploads
+      - ./config/iniciar-web.sh:/deploy/iniciar-web.sh:ro
+      - ./config/proxy.yaml:/app/config/packages/deployment.yaml:ro
+    healthcheck:
+      test: [CMD, php, -r, "exit(@file_get_contents('http://127.0.0.1:8080/login') === false ? 1 : 0);"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  worker:
+    <<: *app
+    command: [sh, /deploy/iniciar-worker.sh]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    volumes:
+      - oauth_keys:/run/novosga-jwt:ro
+      - ./config/iniciar-worker.sh:/deploy/iniciar-worker.sh:ro
+      - ./config/proxy.yaml:/app/config/packages/deployment.yaml:ro
+
+  scheduler:
+    <<: *app
+    command: [sh, /deploy/agendador.sh]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    volumes:
+      - oauth_keys:/run/novosga-jwt:ro
+      - scheduler_state:/var/lib/novosga
+      - ./config/agendador.sh:/deploy/agendador.sh:ro
+      - ./config/proxy.yaml:/app/config/packages/deployment.yaml:ro
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SGA_DOMAIN: ${SGA_DOMAIN:?Informe o dominio}
+      ACME_EMAIL: ${ACME_EMAIL:?Informe o email do certificado}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      novosga: {condition: service_healthy}
+    networks: [edge, backend]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+
+volumes:
+  database:
+  oauth_keys:
+  uploads:
+  scheduler_state:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+  backend:
+    internal: true

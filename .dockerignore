@@ -1,0 +1,4 @@
+*
+!Dockerfile.native
+!source/
+!source/novosga-2.3.4.tar.gz

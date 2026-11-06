@@ -1,0 +1,44 @@
+# Compilacao nativa ARM64 para a VM gratuita Ampere A1, sem emulacao x86.
+# O aplicativo vem do arquivo de codigo oficial, fixado no commit indicado em SOURCE.md.
+FROM composer:2 AS composer
+
+FROM dunglas/frankenphp:1.13-php8.5-alpine
+
+USER root
+COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+RUN install-php-extensions intl pdo_pgsql zip mbstring pcntl sodium
+
+ARG SOURCE_SHA256
+COPY source/novosga-2.3.4.tar.gz /tmp/novosga-source.tar.gz
+RUN test -n "$SOURCE_SHA256" \
+    && echo "$SOURCE_SHA256  /tmp/novosga-source.tar.gz" | sha256sum -c - \
+    && mkdir -p /app \
+    && tar -xzf /tmp/novosga-source.tar.gz --strip-components=1 -C /app \
+    && rm /tmp/novosga-source.tar.gz
+
+WORKDIR /app
+ENV APP_ENV=prod \
+    APP_DEBUG=0 \
+    APP_LANGUAGE=pt_BR \
+    TZ=America/Rio_Branco \
+    XDG_CONFIG_HOME=/tmp/novosga-config \
+    XDG_DATA_HOME=/tmp/novosga-data \
+    APP_BUILD_NUMBER=d22ee22296f8e35d6bfd4b14bd38e9aec93f1cdb \
+    COMPOSER_ALLOW_SUPERUSER=1 \
+    MERCURE_PUBLIC_URL=/.well-known/mercure \
+    MERCURE_URL=http://127.0.0.1:8080/.well-known/mercure
+
+# Chaves de build atendem a verificacao do bundle. O deploy gera outro par exclusivo
+# no volume persistente e usa OAUTH_PRIVATE_KEY/OAUTH_PUBLIC_KEY para seleciona-lo.
+RUN mkdir -p config/jwt public/uploads \
+    && php -r '$k=openssl_pkey_new(["private_key_bits"=>2048,"private_key_type"=>OPENSSL_KEYTYPE_RSA]); if (!$k || !openssl_pkey_export($k,$pem)) {exit(1);} file_put_contents("config/jwt/private.pem",$pem); file_put_contents("config/jwt/public.pem",openssl_pkey_get_details($k)["key"]);' \
+    && cp etc/Caddyfile /etc/frankenphp/Caddyfile \
+    && cp etc/php.ini "$PHP_INI_DIR/php.ini" \
+    && composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader \
+    && composer dump-autoload --no-dev --classmap-authoritative \
+    && composer dump-env prod \
+    && chown -R 65534:65534 /app
+
+USER 65534
+EXPOSE 8080
+CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--adapter", "caddyfile"]

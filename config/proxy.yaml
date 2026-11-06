@@ -1,0 +1,16 @@
+framework:
+    # O aplicativo recebe conexoes somente pela rede privada do proxy.
+    trusted_proxies: [REMOTE_ADDR]
+    trusted_headers: [x-forwarded-for, x-forwarded-host, x-forwarded-proto, x-forwarded-port]
+
+# Acessiveis apenas ao script CLI de configuracao, sem endpoints HTTP extras.
+services:
+    riobranco.deploy.em:
+        alias: doctrine.orm.entity_manager
+        public: true
+    riobranco.deploy.oauth:
+        alias: League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface
+        public: true
+    riobranco.deploy.hasher:
+        alias: security.user_password_hasher
+        public: true
