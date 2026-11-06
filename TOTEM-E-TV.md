@@ -1,5 +1,7 @@
 # Totem Windows, postos e TV
 
+O frontend para o totem está em `frontend` e pode ser publicado na Vercel conforme [VERCEL.md](VERCEL.md). Ele oferece somente as opções de emissão Normal/Prioritário para Recepção e impressão, sem formulário de dados de pacientes. As instruções abaixo para o módulo Triagem descrevem a alternativa operacional integrada ao backend.
+
 ## Postos de atendimento
 
 Cada guichê recebe um login `recepcaoNN` associado ao serviço Recepção e local Guichê N. Cada sala recebe um login `coletaNN`, serviço Coleta e local Sala de coleta N. A quantidade é escolhida com `preparar --guiches N --salas N` na implantação.
@@ -18,7 +20,7 @@ Os logins por posto são uma configuração inicial. Na entrada em operação, c
 
 A triagem integrada chama a impressão do navegador. Em uma máquina dedicada, é possível iniciar o Chrome com `--kiosk-printing` para imprimir na impressora padrão sem a caixa de diálogo. Use essa opção somente depois do teste com diálogo e apenas no perfil dedicado do totem. O driver e a configuração do Windows controlam o equipamento USB; a VM não acessa a impressora diretamente.
 
-O módulo oficial de triagem contém controles de operação e consulta de clientes. Ele não é uma interface pública de autoatendimento simplificada. Se o totem for utilizado diretamente pelos pacientes, a tela e o bloqueio do Windows precisam de uma etapa específica de adaptação/homologação antes da abertura ao público. Este pacote não promete que apenas colocar o navegador em tela cheia resolva isso.
+O módulo oficial de triagem contém controles de operação e consulta de clientes. Para uso direto pelos pacientes, use o frontend Vercel e homologue o bloqueio do Windows, a emissão e a impressão no equipamento dedicado. Colocar o navegador em tela cheia, por si só, não bloqueia o sistema operacional.
 
 ## TV com PC
 

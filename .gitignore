@@ -8,3 +8,6 @@ __pycache__/
 *.pyc
 *.pem
 *.key
+node_modules/
+.vercel/
+vercel.env

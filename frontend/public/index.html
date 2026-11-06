@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#862a41">
+  <meta name="description" content="Emissão de senhas de atendimento do Laboratório Rio Branco.">
+  <title>Retire sua senha · Laboratório Rio Branco</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="/" aria-label="Laboratório Rio Branco, início">
+        <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M13 5h6v8h8v6h-8v8h-6v-8H5v-6h8z" fill="currentColor"/></svg></span>
+        <span><strong>Rio Branco</strong><small>LABORATÓRIO</small></span>
+      </a>
+      <div class="header-right"><span id="system-status" class="status"><i></i><span>Verificando atendimento</span></span><time id="clock" class="clock" aria-label="Horário local"></time></div>
+    </header>
+
+    <main id="main">
+      <section id="welcome" aria-labelledby="welcome-title">
+        <div class="welcome-copy"><span class="eyebrow">SEU ATENDIMENTO COMEÇA AQUI</span>
+          <h1 id="welcome-title">Olá!<br>Retire sua senha.</h1>
+          <p>Escolha seu tipo de atendimento.<br>Depois, aguarde a chamada no painel.</p>
+        </div>
+        <div class="choices" aria-label="Tipos de atendimento">
+          <button class="choice normal" id="normal" type="button" disabled>
+            <span class="choice-top"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 9h22v6a3 3 0 0 0 0 6v4H5v-4a3 3 0 0 0 0-6z"/><path d="M20 9v3m0 3v3m0 3v4"/></svg></span><span class="arrow" aria-hidden="true">↗</span></span>
+            <span class="choice-title">Atendimento<br>normal</span><span class="choice-detail">Toque para emitir sua senha</span>
+          </button>
+          <button class="choice priority" id="priority" type="button" disabled>
+            <span class="choice-top"><span class="choice-icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 27S4 19 4 11a7 7 0 0 1 12-4 7 7 0 0 1 12 4c0 8-12 16-12 16Z"/><path d="M9 15h4l2-5 3 10 2-5h4"/></svg></span><span class="arrow" aria-hidden="true">↗</span></span>
+            <span class="choice-title">Atendimento<br>prioritário</span><span class="choice-detail">Para quem tem direito à prioridade</span>
+          </button>
+        </div>
+        <div class="notice" id="notice" role="status" aria-live="polite"><span class="notice-mark" aria-hidden="true">i</span><p id="notice-text">Verificando a disponibilidade de emissão…</p></div>
+      </section>
+
+      <section id="receipt" class="receipt-screen" aria-labelledby="receipt-title" hidden>
+        <span class="success-mark" aria-hidden="true">✓</span><span class="eyebrow">SENHA EMITIDA</span>
+        <h1 id="receipt-title">Tudo certo.<br>Aguarde a chamada.</h1>
+        <div class="ticket-preview"><span>RECEPÇÃO</span><strong id="ticket-number"></strong><small id="ticket-priority"></small></div>
+        <p>Retire sua senha na impressora e acompanhe o painel.</p>
+        <div class="receipt-actions"><button id="print-again" class="action secondary" type="button">Imprimir novamente</button><button id="start-again" class="action" type="button">Concluir</button></div>
+      </section>
+    </main>
+
+    <footer class="footer"><span><i class="footer-dot"></i> Cuidar de você faz parte da nossa rotina.</span><button id="activate" class="staff-link" type="button" hidden>Ativar este totem</button><small>Laboratório Rio Branco</small></footer>
+  </div>
+
+  <dialog id="activation" aria-labelledby="activation-title">
+    <form id="activation-form"><span class="eyebrow">ACESSO DA EQUIPE</span><h2 id="activation-title">Ativar este equipamento</h2><p>Informe o código de ativação definido pela equipe do laboratório.</p>
+      <label for="activation-code">Código de ativação</label><input id="activation-code" type="password" required minlength="16" maxlength="256" autocomplete="off">
+      <p id="activation-error" class="form-error" role="alert"></p><div class="dialog-actions"><button id="cancel-activation" class="action secondary" type="button">Cancelar</button><button class="action" id="confirm-activation" type="submit">Ativar totem</button></div>
+    </form>
+  </dialog>
+
+  <section id="print-ticket" aria-hidden="true"><h2>Laboratório Rio Branco</h2><p>RECEPÇÃO</p><strong id="print-number"></strong><p id="print-priority"></p><p id="print-time"></p><hr><p>Aguarde sua chamada no painel.</p></section>
+  <noscript><p class="no-js">Ative o JavaScript para usar o totem. Se precisar de ajuda, procure a recepção.</p></noscript>
+</body>
+</html>

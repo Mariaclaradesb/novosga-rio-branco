@@ -2,6 +2,8 @@
 
 O pacote está preparado para uma VM **Ubuntu 24.04 ARM64**, com NovoSGA open source e Mangati apenas como painel. Não é necessário cadastrar conta nem provisionar recursos agora.
 
+Para publicar o **frontend do totem na Vercel**, siga [VERCEL.md](VERCEL.md). Selecione a pasta `frontend` ao importar o GitHub. Os comandos abaixo são para o backend Oracle e não devem ser usados como Build Command da Vercel.
+
 ## Quando for publicar
 
 1. Crie a VM Oracle dentro da faixa Always Free e aponte um domínio/subdomínio para seu IP. As condições estão em [NUVEM-GRATUITA.md](NUVEM-GRATUITA.md).
@@ -45,7 +47,7 @@ Crie o painel com senha em destaque, histórico e áudio; associe o PC da TV à 
 
 ## Totem Windows e Elgin
 
-Use a Triagem integrada e gratuita do NovoSGA. O roteiro está em [TOTEM-E-TV.md](TOTEM-E-TV.md). A interface é a triagem oficial: exige login e escolha do serviço/prioridade. Não foi instalado um aplicativo público de autoatendimento separado.
+O frontend da pasta `frontend` permite autoatendimento na Vercel e se conecta ao backend Oracle, conforme [VERCEL.md](VERCEL.md). Também é possível usar a Triagem integrada do NovoSGA, que exige login e seleção de serviço/prioridade. O roteiro de equipamentos está em [TOTEM-E-TV.md](TOTEM-E-TV.md).
 
 Antes do uso com pacientes, valide emissão, impressão, encaminhamento e chamada com áudio. O modelo exato da Elgin ainda é necessário para acertar driver, papel e corte.
 

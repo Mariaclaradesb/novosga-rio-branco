@@ -4,6 +4,8 @@ Pacote para hospedar o NovoSGA Community Edition em uma VPS e usar o Mangati com
 
 **Para publicar mais tarde, comece por [COMECE-AQUI.md](COMECE-AQUI.md).** Não é preciso concluir cadastros em provedores agora.
 
+**Frontend na Vercel:** a pasta `frontend` contém o totem separado para publicação manual; consulte [VERCEL.md](VERCEL.md). Esta documentação continua descrevendo o backend Oracle. A URL do Mangati deve apontar ao NovoSGA na Oracle, e não ao frontend Vercel.
+
 **Situação em 06/11/2026:** orçamento informado: **custo zero**. Arquivos preparados; servidor e endereço DNS ainda não existem. O deploy e os testes reais de senha, totem e impressão continuam pendentes. Este pacote não foi executado em um Docker Engine nesta sessão.
 
 **Caminho proposto:** Oracle Cloud Always Free em ARM + endereço gratuito DuckDNS + plano gratuito do Mangati Painel. Veja [NUVEM-GRATUITA.md](NUVEM-GRATUITA.md) para a criação da infraestrutura e suas condições.
@@ -89,7 +91,7 @@ Proposta de fluxo para validar com a equipe:
 
 Os serviços, vínculos à unidade, perfis e locais já são preparados pelo instalador. O usuário `recepcao01` atende Recepção no Guichê 1, e `coleta01` atende Coleta na Sala de coleta 1. Postos adicionais seguem a numeração configurada. Revise essa organização com a equipe e crie usuários individuais dos funcionários antes de operar. Confirme se haverá atendimento direto na coleta e a regra de prioridades.
 
-Use o módulo gratuito Triagem em `/novosga.triage/`, com o login `totem`. A triagem oficial já emite e solicita impressão pelo navegador, mas é uma interface operacional, com consulta de clientes. Não há aplicativo público de autoatendimento separado incluído. A adequação para pacientes e a impressão Elgin precisam de homologação; o modelo exato não foi informado. Veja [TOTEM-E-TV.md](TOTEM-E-TV.md). O cliente antigo arquivado `novosga/triage-app` não é utilizado.
+Para autoatendimento, publique a pasta `frontend` na Vercel, configure a conexão ao NovoSGA e autorize o navegador do totem como descrito em [VERCEL.md](VERCEL.md). A interface oferece Normal/Prioritário, chama a emissão real da API e imprime sem transmitir credenciais ao navegador. Como alternativa operacional, a equipe pode usar o módulo gratuito Triagem em `/novosga.triage/`, com o login `totem`; essa interface inclui consulta de clientes. A impressão Elgin precisa de homologação, pois o modelo exato não foi informado. Veja [TOTEM-E-TV.md](TOTEM-E-TV.md). O cliente antigo arquivado `novosga/triage-app` não é utilizado.
 
 ## 6. Vincular o Mangati à instalação própria
 

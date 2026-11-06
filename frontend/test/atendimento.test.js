@@ -1,0 +1,115 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createHandler } from '../lib/atendimento.js';
+
+const environment = () => ({ NODE_ENV: 'production', SGA_BASE_URL: 'https://sga.example.org',
+  SGA_CLIENT_ID: 'cliente-teste', SGA_CLIENT_SECRET: 'segredo-apenas-no-servidor', SGA_USERNAME: 'totem',
+  SGA_PASSWORD: 'senha-apenas-no-servidor', SGA_UNIT_ID: '3', SGA_SERVICE_ID: '8', SGA_NORMAL_PRIORITY_ID: '1',
+  SGA_PRIORITY_ID: '2', KIOSK_ACCESS_CODE: 'codigo-teste-forte-123456', COOKIE_SECRET: 'segredo-teste-cookies-com-mais-de-32-caracteres' });
+function backend(calls, ticket = { id: 24, senha: { format: 'R024' } }) {
+  return async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith('/api/token')) return new Response(JSON.stringify({ access_token: 'token-so-no-servidor', expires_in: 3600 }));
+    return new Response(JSON.stringify(ticket), { status: 201 });
+  };
+}
+async function invoke(handler, { method = 'GET', data, cookie, origin = 'https://totem.example.org', type = 'application/json' } = {}) {
+  const headers = {};
+  const req = { method, headers: { host: 'totem.example.org', origin, 'content-type': type, cookie }, body: data };
+  const res = { statusCode: 0, setHeader: (key, value) => { headers[key] = value; }, end: value => { res.body = JSON.parse(value); } };
+  await handler(req, res);
+  return { status: res.statusCode, body: res.body, headers };
+}
+async function authorize(handler, env) {
+  const result = await invoke(handler, { method: 'POST', data: { action: 'authorize', code: env.KIOSK_ACCESS_CODE } });
+  assert.equal(result.status, 200);
+  const cookie = result.headers['Set-Cookie'].split(';')[0];
+  const state = await invoke(handler, { cookie });
+  assert.equal(state.body.authorized, true);
+  return { cookie, csrf: state.body.csrf, result };
+}
+
+test('sem configuracao, a pagina informa indisponibilidade e nao emite senha', async () => {
+  const handler = createHandler({ env: {}, request: () => assert.fail('nao deve acessar backend') });
+  const status = await invoke(handler);
+  assert.deepEqual(status.body, { configured: false, authorized: false, csrf: null });
+  assert.equal((await invoke(handler, { method: 'POST', data: { action: 'emit', priority: 'normal' } })).status, 503);
+});
+
+test('URL sem HTTPS e IDs invalidos desativam a emissao', async () => {
+  for (const change of [{ SGA_BASE_URL: 'http://sga.example.org' }, { SGA_BASE_URL: 'https://sga.example.org/login' }, { SGA_UNIT_ID: '1;delete' }, { COOKIE_SECRET: 'curto' }]) {
+    const handler = createHandler({ env: { ...environment(), ...change } });
+    assert.equal((await invoke(handler)).body.configured, false);
+  }
+});
+
+test('codigo incorreto e origem externa nao acessam backend', async () => {
+  const handler = createHandler({ env: environment(), request: () => assert.fail('nao deve acessar backend') });
+  assert.equal((await invoke(handler, { method: 'POST', data: { action: 'authorize', code: 'errado' } })).status, 403);
+  assert.equal((await invoke(handler, { method: 'POST', origin: 'https://atacante.example.org', data: { action: 'authorize', code: 'qualquer' } })).status, 403);
+});
+
+test('ativacao autentica no backend e guarda somente cookie assinado protegido', async () => {
+  const env = environment(); const calls = [];
+  const handler = createHandler({ env, request: backend(calls) });
+  const { result } = await authorize(handler, env);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.body.get('password'), env.SGA_PASSWORD);
+  assert.equal(calls[0].options.body.get('client_secret'), env.SGA_CLIENT_SECRET);
+  assert.match(result.headers['Set-Cookie'], /HttpOnly; SameSite=Strict/);
+  assert.match(result.headers['Set-Cookie'], /; Secure$/);
+  for (const secret of [env.SGA_PASSWORD, env.SGA_CLIENT_SECRET, 'token-so-no-servidor', env.KIOSK_ACCESS_CODE]) {
+    assert.equal(JSON.stringify(result).includes(secret), false);
+  }
+});
+
+test('cookie ausente ou CSRF incorreto impedem emissao', async () => {
+  const env = environment(); const calls = []; const handler = createHandler({ env, request: backend(calls) });
+  assert.equal((await invoke(handler, { method: 'POST', data: { action: 'emit', priority: 'normal', csrf: 'x' } })).status, 403);
+  const auth = await authorize(handler, env);
+  assert.equal((await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority: 'normal', csrf: 'errado' } })).status, 403);
+  assert.equal(calls.length, 1);
+});
+
+for (const [priority, id] of [['normal', 1], ['priority', 2]]) {
+  test(`emissao ${priority} usa somente unidade, servico e prioridade autorizados`, async () => {
+    const env = environment(); const calls = []; const handler = createHandler({ env, request: backend(calls) });
+    const auth = await authorize(handler, env);
+    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority, csrf: auth.csrf, unidade: 999, servico: 999, cliente: { nome: 'nao transmitir' } } });
+    assert.equal(result.status, 201);
+    assert.equal(result.body.number, 'R024');
+    assert.deepEqual(JSON.parse(calls[1].options.body), { unidade: 3, servico: 8, prioridade: id });
+    assert.equal(calls[1].options.headers.Authorization, 'Bearer token-so-no-servidor');
+    assert.equal(JSON.stringify(result).includes('token-so-no-servidor'), false);
+    assert.equal(calls.length, 2);
+  });
+}
+
+test('falha apos envio nao repete a emissao e sinaliza resultado incerto', async () => {
+  const env = environment(); let emissions = 0; const normal = backend([]);
+  const handler = createHandler({ env, request: async (url, options) => {
+    if (url.endsWith('/api/distribui')) { emissions++; throw new Error('falha de rede com segredo-nao-exibir'); }
+    return normal(url, options);
+  } });
+  const auth = await authorize(handler, env);
+  const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority: 'normal', csrf: auth.csrf } });
+  assert.equal(emissions, 1); assert.equal(result.body.uncertain, true);
+  assert.equal(JSON.stringify(result).includes('segredo-nao-exibir'), false);
+});
+
+test('sessao adulterada, expirada ou codigo rotacionado nao autorizam', async () => {
+  const env = environment(); let now = Date.now(); const handler = createHandler({ env, request: backend([]), clock: () => now });
+  const auth = await authorize(handler, env);
+  assert.equal((await invoke(handler, { cookie: auth.cookie + 'adulterado' })).body.authorized, false);
+  now += 31 * 24 * 60 * 60 * 1000;
+  assert.equal((await invoke(handler, { cookie: auth.cookie })).body.authorized, false);
+  now = Date.now(); env.KIOSK_ACCESS_CODE = 'codigo-novo-e-seguro-123456';
+  assert.equal((await invoke(handler, { cookie: auth.cookie })).body.authorized, false);
+});
+
+test('resposta inesperada do backend nao gera numero ficticio', async () => {
+  const env = environment(); const handler = createHandler({ env, request: backend([], { id: 24, senha: { format: '<script>erro</script>' } }) });
+  const auth = await authorize(handler, env);
+  const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority: 'normal', csrf: auth.csrf } });
+  assert.equal(result.status, 502); assert.equal(result.body.uncertain, true); assert.equal(result.body.number, undefined);
+});

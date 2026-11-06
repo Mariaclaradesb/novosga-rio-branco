@@ -35,4 +35,13 @@ O factory original não suporta SQLite. Para o teste HTTP de OAuth, **somente a 
 
 Não havia Docker Engine, VPS ou domínio configurados. Não foram executados nesta sessão: build nativo ARM, pull/inicialização das imagens, migrações em PostgreSQL, emissão de certificado, teste do hub Mercure, autenticação da conta Mangati, chamada de senha na TV, teste de carga, impressão Elgin ou recuperação de backup.
 
-O orçamento foi definido como custo zero; a escolha é Oracle Always Free + DuckDNS + plano gratuito do Painel, dentro das condições dos provedores. O cadastro e a disponibilidade da VM ainda precisam ser confirmados. O modelo da impressora e as quantidades reais de postos continuam em aberto. A emissão usa a triagem oficial, sem aplicativo público de autoatendimento separado. Os testes locais não substituem a homologação na VM, nos postos, no totem e na TV.
+O backend foi preparado para Oracle Always Free + DuckDNS, com Mangati para a TV, dentro das condições dos provedores. O usuário escolheu publicar manualmente o frontend na Vercel. O cadastro e a disponibilidade da VM ainda precisam ser confirmados. O modelo da impressora e as quantidades reais de postos continuam em aberto. Os testes locais não substituem a homologação na VM, nos postos, no totem e na TV.
+
+## Frontend Vercel
+
+- Tela de emissão Normal/Prioritário na pasta `frontend`, com impressão/reimpressão pelo navegador e mensagem explícita de indisponibilidade quando o backend ainda não está configurado.
+- Dez testes Node aprovados: configuração ausente/inválida; origem e código inválidos; autenticação de equipamento; cookie protegido sem credenciais; cookie/CSRF ausentes ou inválidos; emissão Normal e Prioritário somente nos IDs autorizados; falha de comunicação sem repetição automática; sessão adulterada/expirada e rotação de código; resposta inválida sem número fictício.
+- `npm run build` aprovado e arquivos necessários à publicação verificados. Sem dependências externas de produção.
+- Prévia local conferida visualmente no navegador: tela do laboratório, botões desativados e mensagem de emissão não ativada sem backend configurado.
+- A API do frontend foi exercitada com backend simulado. Emissões e impressão reais ainda não foram executadas contra a Oracle/Elgin.
+- O deploy Vercel será realizado manualmente pelo usuário, conforme `VERCEL.md`. Não há URL Vercel publicada nesta sessão.

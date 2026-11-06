@@ -2,6 +2,8 @@
 
 Pacote de implantação do **NovoSGA open source 2.3.4**, com PostgreSQL e HTTPS, preparado para uma VM **Oracle Cloud Ubuntu 24.04 ARM64**. O **Mangati** é usado como painel da TV, conectado à instalação própria do NovoSGA.
 
+O **frontend do totem para a Vercel** está na pasta `frontend`. Para importar manualmente, siga [VERCEL.md](VERCEL.md): Framework **Other**, Root Directory **frontend**, build **npm run build**, saída **public**. É possível publicar a tela antes de configurar a Oracle; a emissão permanece desativada até conectar o backend.
+
 **Estado:** preparado para implantação futura. Ainda não há VM ou domínio configurados. Os testes locais de cadastros e OAuth passaram; a stack Docker ARM e o fluxo nos equipamentos precisam ser homologados após o deploy. Consulte [VALIDACAO.md](VALIDACAO.md).
 
 ## O que o instalador configura
@@ -36,11 +38,12 @@ No Mangati Painel, configure um app **NovoSGA V2.1+** com a URL HTTPS do servido
 
 ## Totem e impressão
 
-O pacote usa o módulo gratuito de Triagem do NovoSGA para emitir senhas e solicitar impressão pelo navegador. A Elgin usa o driver instalado no Windows; o modelo exato ainda precisa ser confirmado. A triagem oficial é uma interface operacional: o uso direto por pacientes precisa de adaptação e homologação específicas. Veja [TOTEM-E-TV.md](TOTEM-E-TV.md).
+O novo frontend Vercel oferece os botões Normal/Prioritário, emissão pela API NovoSGA e impressão pelo navegador. A autorização é feita por equipamento; senha do NovoSGA e Client Secret ficam no servidor Vercel. O módulo de Triagem integrado ao NovoSGA continua disponível como alternativa operacional para a equipe. A Elgin usa o driver instalado no Windows; o modelo exato ainda precisa ser confirmado. A integração real com Oracle, impressão e chamada na TV precisa ser homologada. Veja [VERCEL.md](VERCEL.md) e [TOTEM-E-TV.md](TOTEM-E-TV.md).
 
 ## Documentação e origem
 
 - [Guia resumido](COMECE-AQUI.md)
+- [Deploy manual do totem na Vercel](VERCEL.md)
 - [Guia completo, operação e recuperação de backup](LEIA-ME.md)
 - [Infraestrutura gratuita proposta](NUVEM-GRATUITA.md)
 - [Totem, postos e TV](TOTEM-E-TV.md)
