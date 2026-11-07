@@ -1,7 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const COOKIE = 'rb_totem';
-const DURATION = 30 * 24 * 60 * 60;
+// Acesso e armazenamento expiram apos 30 dias sem uso autenticado.
+const SESSION_DURATION = 30 * 24 * 60 * 60;
 const REQUIRED = ['SGA_BASE_URL', 'SGA_CLIENT_ID', 'SGA_CLIENT_SECRET', 'SGA_USERNAME', 'SGA_PASSWORD',
   'SGA_UNIT_ID', 'SGA_SERVICE_ID', 'SGA_NORMAL_PRIORITY_ID', 'SGA_PRIORITY_ID', 'KIOSK_ACCESS_CODE', 'COOKIE_SECRET'];
 
@@ -37,12 +38,15 @@ function session(req, env, now) {
   if (!payload || !sig || extra || !equal(signature(payload, env), sig)) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
-    return Number.isInteger(data.exp) && data.exp > now && /^[a-f0-9]{32}$/.test(data.csrf) ? data : null;
+    if (!data || Array.isArray(data) || typeof data.csrf !== 'string' || !/^[a-f0-9]{32}$/.test(data.csrf)) return null;
+    return data.v === undefined && Number.isInteger(data.exp) && data.exp > now ? data : null;
   } catch { return null; }
 }
 
-function cookie(value, env, age = DURATION) {
-  return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${env.NODE_ENV === 'production' || env.VERCEL ? '; Secure' : ''}`;
+function remember(res, auth, env, now) {
+  const payload = Buffer.from(JSON.stringify({ exp: now + SESSION_DURATION, csrf: auth.csrf })).toString('base64url');
+  const value = payload + '.' + signature(payload, env);
+  res.setHeader('Set-Cookie', `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_DURATION}${env.NODE_ENV === 'production' || env.VERCEL ? '; Secure' : ''}`);
 }
 
 function sameOrigin(req) {
@@ -87,8 +91,10 @@ export function createHandler({ env = process.env, request = fetch, clock = () =
     let emitting = false;
     try {
       const config = configuration(env);
+      const now = Math.floor(clock() / 1000);
       if (req.method === 'GET') {
-        const auth = config ? session(req, env, Math.floor(clock() / 1000)) : null;
+        const auth = config ? session(req, env, now) : null;
+        if (auth) remember(res, auth, env, now);
         send(200, { configured: Boolean(config), authorized: Boolean(auth), csrf: auth?.csrf ?? null });
         return;
       }
@@ -102,14 +108,13 @@ export function createHandler({ env = process.env, request = fetch, clock = () =
         }
         // Confirmar credenciais do backend antes de autorizar o equipamento.
         await token(config);
-        const payload = Buffer.from(JSON.stringify({ exp: Math.floor(clock() / 1000) + DURATION,
-          csrf: randomBytes(16).toString('hex') })).toString('base64url');
-        res.setHeader('Set-Cookie', cookie(payload + '.' + signature(payload, env), env));
+        remember(res, { csrf: randomBytes(16).toString('hex') }, env, now);
         send(200, { authorized: true }); return;
       }
-      const auth = session(req, env, Math.floor(clock() / 1000));
+      const auth = session(req, env, now);
       if (!auth || typeof data.csrf !== 'string' || !equal(data.csrf, auth.csrf)) throw new AppError(403, 'Peça à equipe para ativar este totem.');
       if (data.action !== 'emit' || !['normal', 'priority'].includes(data.priority)) throw new AppError(400, 'Selecione o tipo de atendimento.');
+      remember(res, auth, env, now);
       const access = await token(config);
       emitting = true;
       const response = await request(config.base + '/api/distribui', { method: 'POST', redirect: 'error',

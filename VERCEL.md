@@ -85,12 +85,14 @@ Após salvar as variáveis, vá a **Deployments → último deploy → Redeploy*
 
 1. No Windows dedicado ao totem, abra a URL de produção `.vercel.app`.
 2. Clique em **Ativar este totem** e digite o valor de `KIOSK_ACCESS_CODE`.
-3. A aplicação confere a autenticação no NovoSGA antes de autorizar o equipamento. A autorização desse navegador dura até 30 dias; não use navegação anônima se precisar preservá-la.
+3. A aplicação confere a autenticação no NovoSGA antes de autorizar o equipamento. A autorização fica salva no navegador e se renova automaticamente ao abrir a tela ou emitir uma senha, sem reativação mensal durante o uso normal. Ativações anteriores que ainda estejam válidas passam a ser renovadas automaticamente ao acessar a tela. Não use navegação anônima se precisar preservá-la.
 4. Instale o driver Elgin correto e escolha a impressora térmica padrão do Windows. Configure largura e corte conforme o modelo.
 5. Emita uma senha de teste. O número vem do NovoSGA e a impressão usa o navegador. A opção **Imprimir novamente** reaproveita o número emitido, sem gerar outra senha.
 6. Para impressão sem caixa de diálogo, teste depois o Chrome em perfil dedicado com `--kiosk-printing`. O modelo Elgin e a impressão real ainda precisam ser homologados.
 
-Se mudar `KIOSK_ACCESS_CODE` ou `COOKIE_SECRET`, os navegadores terão de ser autorizados novamente. Em falha de comunicação durante uma emissão, a tela bloqueia novas emissões até a equipe conferir a fila e recarregar: a senha pode ter sido criada mesmo se a resposta não chegou. Não há repetição automática de emissão nem garantia de operação offline.
+O cookie e a autorização assinada no servidor vencem 30 dias após o último uso autenticado. Cada acesso à tela e cada emissão com autorização válida renovam ambos os prazos sem pedir o código. Se ficar 30 dias sem usar o sistema, o navegador apagar o cookie ou a equipe mudar `KIOSK_ACCESS_CODE` ou `COOKIE_SECRET`, será preciso autorizar novamente. Fechar o navegador, reiniciar o computador e publicar atualizações preservam a autorização enquanto o cookie válido e os segredos forem mantidos.
+
+Em falha de comunicação durante uma emissão, a tela bloqueia novas emissões até a equipe conferir a fila e recarregar: a senha pode ter sido criada mesmo se a resposta não chegou. Não há repetição automática de emissão nem garantia de operação offline.
 
 ## 6. Conferir a chamada na TV
 
