@@ -9,7 +9,8 @@ updateClock(); setInterval(updateClock, 30000);
 function notice(text, error = false) { $('notice-text').textContent = text; $('notice').classList.toggle('error', error); }
 function controls() { for (const id of ['normal', 'priority']) $(id).disabled = busy || locked || !state.authorized; }
 function render() {
-  controls(); $('activate').hidden = !state.configured || state.authorized;
+  controls(); $('activate').hidden = state.authorized;
+  $('notice-actions').hidden = state.authorized;
   $('system-status').classList.toggle('ready', state.authorized);
   $('system-status').querySelector('span').textContent = state.authorized ? 'Emissão habilitada' : 'Aguardando ativação';
   if (!locked) notice(state.authorized ? 'Sua senha será impressa. Aguarde a chamada na TV antes de ir ao guichê.'
@@ -18,14 +19,49 @@ function render() {
 
 async function call(data) {
   const options = data ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) } : {};
-  const response = await fetch(api, { ...options, cache: 'no-store', credentials: 'same-origin', signal: AbortSignal.timeout(28000) });
-  const result = await response.json();
-  if (!response.ok) throw Object.assign(new Error(result.error || 'Atendimento indisponível.'), { uncertain: result.uncertain });
-  return result;
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  let timer;
+  const timeout = new Promise((resolve, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error('A conexão demorou mais que o esperado.');
+      error.name = 'TimeoutError';
+      reject(error);
+      if (controller) controller.abort();
+    }, 28000);
+  });
+  const operation = (async () => {
+    const response = await fetch(api, { ...options, cache: 'no-store', credentials: 'same-origin',
+      ...(controller ? { signal: controller.signal } : {}) });
+    const result = await response.json();
+    if (!response.ok) throw Object.assign(new Error(result.error || 'Atendimento indisponível.'), { uncertain: result.uncertain });
+    return result;
+  })();
+  try { return await Promise.race([operation, timeout]); }
+  finally { clearTimeout(timer); }
 }
 async function status() {
+  $('retry-connection').hidden = true;
+  $('retry-connection').disabled = true;
   try { state = await call(); render(); }
-  catch { state = { configured: false, authorized: false, csrf: null }; render(); notice('Não foi possível conectar. Procure a recepção.', true); }
+  catch {
+    state = { configured: false, authorized: false, csrf: null }; render();
+    $('retry-connection').hidden = false;
+    notice('Não foi possível conectar. Verifique a internet e toque em “Tentar novamente”.', true);
+  } finally { $('retry-connection').disabled = false; }
+}
+
+function openActivation() {
+  $('activation-error').textContent = ''; $('activation-code').value = '';
+  const dialog = $('activation');
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else { dialog.classList.add('fallback-dialog'); dialog.setAttribute('open', ''); }
+  $('activation-code').focus();
+}
+function closeActivation() {
+  const dialog = $('activation');
+  if (typeof dialog.close === 'function') dialog.close();
+  else dialog.removeAttribute('open');
+  dialog.classList.remove('fallback-dialog');
 }
 
 function reset() { clearTimeout(resetTimer); $('receipt').hidden = true; $('welcome').hidden = false; render(); }
@@ -51,11 +87,12 @@ $('normal').addEventListener('click', () => issue('normal'));
 $('priority').addEventListener('click', () => issue('priority'));
 $('print-again').addEventListener('click', printTicket);
 $('start-again').addEventListener('click', reset);
-$('activate').addEventListener('click', () => { $('activation-error').textContent = ''; $('activation-code').value = ''; $('activation').showModal(); });
-$('cancel-activation').addEventListener('click', () => $('activation').close());
+$('activate').addEventListener('click', openActivation);
+$('cancel-activation').addEventListener('click', closeActivation);
+$('retry-connection').addEventListener('click', status);
 $('activation-form').addEventListener('submit', async event => {
   event.preventDefault(); $('confirm-activation').disabled = true; $('activation-error').textContent = '';
-  try { await call({ action: 'authorize', code: $('activation-code').value }); $('activation-code').value = ''; $('activation').close(); await status(); }
+  try { await call({ action: 'authorize', code: $('activation-code').value }); $('activation-code').value = ''; closeActivation(); await status(); }
   catch (error) { $('activation-error').textContent = error.message; }
   finally { $('confirm-activation').disabled = false; }
 });

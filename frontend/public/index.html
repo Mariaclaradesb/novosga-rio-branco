@@ -7,8 +7,8 @@
   <meta name="description" content="Emissão de senhas de atendimento do Laboratório Rio Branco.">
   <title>Retire sua senha · Laboratório Rio Branco</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css">
-  <script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/style.css?v=tablet-compat-1">
+  <script src="/app.js?v=tablet-compat-1" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -35,7 +35,7 @@
             <span class="choice-title">Atendimento<br>prioritário</span><span class="choice-detail">Para quem tem direito à prioridade</span>
           </button>
         </div>
-        <div class="notice" id="notice" role="status" aria-live="polite"><span class="notice-mark" aria-hidden="true">i</span><p id="notice-text">Verificando a disponibilidade de emissão…</p></div>
+        <div class="notice" id="notice" role="status" aria-live="polite"><span class="notice-mark" aria-hidden="true">i</span><p id="notice-text">Verificando a disponibilidade de emissão…</p><div id="notice-actions" class="notice-actions"><button id="retry-connection" class="staff-link" type="button" hidden>Tentar novamente</button><button id="activate" class="staff-link" type="button">Ativar este totem</button></div></div>
       </section>
 
       <section id="receipt" class="receipt-screen" aria-labelledby="receipt-title" hidden>
@@ -47,10 +47,10 @@
       </section>
     </main>
 
-    <footer class="footer"><span><i class="footer-dot"></i> Cuidar de você faz parte da nossa rotina.</span><button id="activate" class="staff-link" type="button" hidden>Ativar este totem</button><small>Laboratório Rio Branco</small></footer>
+    <footer class="footer"><span><i class="footer-dot"></i> Cuidar de você faz parte da nossa rotina.</span><small>Laboratório Rio Branco</small></footer>
   </div>
 
-  <dialog id="activation" aria-labelledby="activation-title">
+  <dialog id="activation" role="dialog" aria-modal="true" aria-labelledby="activation-title">
     <form id="activation-form"><span class="eyebrow">ACESSO DA EQUIPE</span><h2 id="activation-title">Ativar este equipamento</h2><p>Informe o código de ativação definido pela equipe do laboratório.</p>
       <label for="activation-code">Código de ativação</label><input id="activation-code" type="password" required minlength="16" maxlength="256" autocomplete="off">
       <p id="activation-error" class="form-error" role="alert"></p><div class="dialog-actions"><button id="cancel-activation" class="action secondary" type="button">Cancelar</button><button class="action" id="confirm-activation" type="submit">Ativar totem</button></div>

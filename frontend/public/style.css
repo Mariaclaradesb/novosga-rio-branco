@@ -1,1 +1,9 @@
 @import url('/layout.css');
+
+.shell{min-height:100vh;min-height:100svh}
+.notice{flex-wrap:wrap}
+.notice p{flex:1;min-width:170px}
+.notice-actions{display:flex;flex-wrap:wrap;gap:8px}
+.notice .staff-link{min-height:44px;padding:10px 14px;border:1px solid #bfd1c3;border-radius:9px;color:var(--brand);font-size:12px;font-weight:550}
+dialog:not([open]){display:none}
+dialog.fallback-dialog[open]{display:block;position:fixed;top:50%;left:50%;margin:0;transform:translate(-50%,-50%);z-index:10;max-height:calc(100vh - 40px);overflow:auto;background:#fff;box-shadow:0 0 0 100vmax #19302766}

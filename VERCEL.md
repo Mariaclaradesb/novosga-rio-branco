@@ -84,7 +84,7 @@ Após salvar as variáveis, vá a **Deployments → último deploy → Redeploy*
 ## 5. Ativar o computador do totem
 
 1. No Windows dedicado ao totem, abra a URL de produção `.vercel.app`.
-2. Clique em **Ativar este totem** e digite o valor de `KIOSK_ACCESS_CODE`.
+2. Clique em **Ativar este totem**, abaixo das opções de atendimento, e digite o valor de `KIOSK_ACCESS_CODE`. Se houver falha na consulta inicial, **Tentar novamente** refaz somente a consulta de conexão, sem emitir senhas.
 3. A aplicação confere a autenticação no NovoSGA antes de autorizar o equipamento. A autorização fica salva no navegador e se renova automaticamente ao abrir a tela ou emitir uma senha, sem reativação mensal durante o uso normal. Ativações anteriores que ainda estejam válidas passam a ser renovadas automaticamente ao acessar a tela. Não use navegação anônima se precisar preservá-la.
 4. Instale o driver Elgin correto e escolha a impressora térmica padrão do Windows. Configure largura e corte conforme o modelo.
 5. Emita uma senha de teste. O número vem do NovoSGA e a impressão usa o navegador. A opção **Imprimir novamente** reaproveita o número emitido, sem gerar outra senha.

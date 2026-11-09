@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const html = await readFile(join(root, 'public/index.html'), 'utf8');
-for (const match of html.matchAll(/(?:src|href)="(\/[^"#?]*)"/g)) {
-  if (match[1] !== '/') await access(join(root, 'public', match[1]));
+for (const match of html.matchAll(/(?:src|href)="(\/[^"]*)"/g)) {
+  const path = match[1].split(/[?#]/, 1)[0];
+  if (path !== '/') await access(join(root, 'public', path));
 }
 await access(join(root, 'public/layout.css'));
 await access(join(root, 'api/atendimento.js'));
