@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 const COOKIE = 'rb_totem';
 // Acesso e armazenamento expiram apos 30 dias sem uso autenticado.
 const SESSION_DURATION = 30 * 24 * 60 * 60;
+const SERVICES = { atendimento: 'Atendimento', retirada: 'Retirada de Exames' };
 const REQUIRED = ['SGA_BASE_URL', 'SGA_CLIENT_ID', 'SGA_CLIENT_SECRET', 'SGA_USERNAME', 'SGA_PASSWORD',
   'SGA_UNIT_ID', 'SGA_SERVICE_ID', 'SGA_NORMAL_PRIORITY_ID', 'SGA_PRIORITY_ID', 'KIOSK_ACCESS_CODE', 'COOKIE_SECRET'];
 
@@ -83,6 +84,26 @@ export function createHandler({ env = process.env, request = fetch, clock = () =
     cached = { token: result.access_token, exp: clock() + Math.min(Number(result.expires_in) || 60, 3600) * 1000 };
     return cached.token;
   }
+  async function service(config, access, key) {
+    const response = await request(`${config.base}/api/unidades/${config.unit}/servicos`, {
+      method: 'GET', redirect: 'error', signal: AbortSignal.timeout(5000),
+      headers: { Accept: 'application/json', Authorization: 'Bearer ' + access },
+    });
+    if (!response.ok) throw new AppError(503, 'Não foi possível consultar os serviços. Procure a recepção.');
+    const result = await response.json();
+    if (!Array.isArray(result)) throw new AppError(503, 'Os serviços precisam ser conferidos pela recepção.');
+    const normalize = value => typeof value === 'string'
+      ? value.normalize('NFD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase() : '';
+    const available = result.filter(item => item?.ativo === true && item.servico?.ativo !== false &&
+      Number.isInteger(item.servico?.id) && item.servico.id > 0);
+    let matches = available.filter(item => normalize(item.servico.nome) === normalize(SERVICES[key]));
+    // A antiga fila de Recepcao continua atendendo enquanto seu nome nao for atualizado.
+    if (!matches.length && key === 'atendimento') {
+      matches = available.filter(item => item.servico.id === config.service && normalize(item.servico.nome) === 'recepcao');
+    }
+    if (matches.length !== 1) throw new AppError(503, `${SERVICES[key]} ainda não está disponível. Procure a recepção.`);
+    return { id: matches[0].servico.id, name: SERVICES[key] };
+  }
   return async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -114,12 +135,15 @@ export function createHandler({ env = process.env, request = fetch, clock = () =
       const auth = session(req, env, now);
       if (!auth || typeof data.csrf !== 'string' || !equal(data.csrf, auth.csrf)) throw new AppError(403, 'Peça à equipe para ativar este totem.');
       if (data.action !== 'emit' || !['normal', 'priority'].includes(data.priority)) throw new AppError(400, 'Selecione o tipo de atendimento.');
+      const serviceKey = data.service === undefined ? 'atendimento' : data.service;
+      if (!['atendimento', 'retirada'].includes(serviceKey)) throw new AppError(400, 'Selecione um serviço disponível.');
       remember(res, auth, env, now);
       const access = await token(config);
+      const selected = await service(config, access, serviceKey);
       emitting = true;
       const response = await request(config.base + '/api/distribui', { method: 'POST', redirect: 'error',
         signal: AbortSignal.timeout(12000), headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + access },
-        body: JSON.stringify({ unidade: config.unit, servico: config.service,
+        body: JSON.stringify({ unidade: config.unit, servico: selected.id,
           prioridade: data.priority === 'normal' ? config.normal : config.priority }) });
       // Nunca repetir automaticamente uma emissao: a resposta pode ter se perdido apos gravar no NovoSGA.
       if (!response.ok) throw new AppError(502, 'Não foi possível confirmar sua senha. Consulte a recepção antes de tentar novamente.', true);
@@ -128,7 +152,7 @@ export function createHandler({ env = process.env, request = fetch, clock = () =
       if (typeof number !== 'string' || !/^[\p{L}\p{N} -]{1,16}$/u.test(number) || !Number.isInteger(ticket.id) || ticket.id < 1) {
         throw new AppError(502, 'A emissão precisa ser conferida pela recepção.', true);
       }
-      send(201, { number, service: 'Recepção', priority: data.priority === 'normal' ? 'Normal' : 'Prioridade', issuedAt: new Date(clock()).toISOString() });
+      send(201, { number, service: selected.name, priority: data.priority === 'normal' ? 'Normal' : 'Preferencial', issuedAt: new Date(clock()).toISOString() });
     } catch (error) {
       send(error instanceof AppError ? error.status : 503, {
         error: error instanceof AppError ? error.message : (emitting

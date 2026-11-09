@@ -1,13 +1,19 @@
 const $ = id => document.getElementById(id);
 let state = { configured: false, authorized: false, csrf: null };
 let busy = false; let locked = false; let resetTimer;
+let selectedService = null;
+const services = { atendimento: 'Atendimento', retirada: 'Retirada de Exames' };
 const api = '/api/atendimento';
 
 function updateClock() { $('clock').textContent = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Rio_Branco', hour: '2-digit', minute: '2-digit' }).format(new Date()); }
 updateClock(); setInterval(updateClock, 30000);
 
 function notice(text, error = false) { $('notice-text').textContent = text; $('notice').classList.toggle('error', error); }
-function controls() { for (const id of ['normal', 'priority']) $(id).disabled = busy || locked || !state.authorized; }
+function controls() {
+  const disabled = busy || locked || !state.authorized;
+  for (const id of ['service-atendimento', 'service-retirada']) $(id).disabled = disabled || selectedService !== null;
+  for (const id of ['normal', 'priority']) $(id).disabled = disabled || selectedService === null;
+}
 function render() {
   controls(); $('activate').hidden = state.authorized;
   $('notice-actions').hidden = state.authorized;
@@ -50,28 +56,44 @@ async function status() {
   } finally { $('retry-connection').disabled = false; }
 }
 
-function openActivation() {
-  $('activation-error').textContent = ''; $('activation-code').value = '';
-  const dialog = $('activation');
+function openDialog(id) {
+  const dialog = $(id);
   if (typeof dialog.showModal === 'function') dialog.showModal();
   else { dialog.classList.add('fallback-dialog'); dialog.setAttribute('open', ''); }
-  $('activation-code').focus();
 }
-function closeActivation() {
-  const dialog = $('activation');
+function closeDialog(id) {
+  const dialog = $(id);
   if (typeof dialog.close === 'function') dialog.close();
   else dialog.removeAttribute('open');
   dialog.classList.remove('fallback-dialog');
 }
+function openActivation() {
+  $('activation-error').textContent = ''; $('activation-code').value = '';
+  openDialog('activation'); $('activation-code').focus();
+}
+function closeActivation() { closeDialog('activation'); }
+function chooseService(service) {
+  if (busy || locked || !state.authorized || selectedService !== null || !Object.prototype.hasOwnProperty.call(services, service)) return;
+  selectedService = service;
+  $('priority-title').textContent = services[service];
+  controls(); openDialog('priority-selection'); $('normal').focus();
+}
+function cancelService() {
+  const service = selectedService;
+  selectedService = null; closeDialog('priority-selection'); controls();
+  if (service) $('service-' + service).focus();
+}
 
-function reset() { clearTimeout(resetTimer); $('receipt').hidden = true; $('welcome').hidden = false; render(); }
+function reset() { clearTimeout(resetTimer); selectedService = null; closeDialog('priority-selection'); $('receipt').hidden = true; $('welcome').hidden = false; render(); }
 function printTicket() { clearTimeout(resetTimer); window.print(); resetTimer = setTimeout(reset, 20000); }
 async function issue(priority) {
-  if (busy || locked || !state.authorized) return;
-  busy = true; controls(); notice('Emitindo sua senha. Aguarde…');
+  if (busy || locked || !state.authorized || selectedService === null) return;
+  const service = selectedService;
+  busy = true; selectedService = null; closeDialog('priority-selection'); controls(); notice('Emitindo sua senha. Aguarde…');
   try {
-    const result = await call({ action: 'emit', priority, csrf: state.csrf });
+    const result = await call({ action: 'emit', service, priority, csrf: state.csrf });
     $('ticket-number').textContent = $('print-number').textContent = result.number;
+    $('ticket-service').textContent = $('print-service').textContent = result.service;
     $('ticket-priority').textContent = $('print-priority').textContent = result.priority;
     $('print-time').textContent = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Rio_Branco', dateStyle: 'short', timeStyle: 'short' }).format(new Date(result.issuedAt));
     $('welcome').hidden = true; $('receipt').hidden = false;
@@ -79,10 +101,14 @@ async function issue(priority) {
     requestAnimationFrame(() => requestAnimationFrame(printTicket));
   } catch (error) {
     // Em uma falha de rede, a senha pode ter sido emitida. Nao repetir por conta propria.
-    locked = true; controls(); notice(error.message.includes('fetch') || error.name === 'TimeoutError'
+    locked = error.uncertain !== false; controls(); notice(error.message.includes('fetch') || error.name === 'TimeoutError'
       ? 'A conexão caiu durante a emissão. Consulte a recepção antes de tentar novamente.' : error.message, true);
   } finally { busy = false; controls(); }
 }
+$('service-atendimento').addEventListener('click', () => chooseService('atendimento'));
+$('service-retirada').addEventListener('click', () => chooseService('retirada'));
+$('cancel-priority').addEventListener('click', cancelService);
+$('priority-selection').addEventListener('cancel', cancelService);
 $('normal').addEventListener('click', () => issue('normal'));
 $('priority').addEventListener('click', () => issue('priority'));
 $('print-again').addEventListener('click', printTicket);

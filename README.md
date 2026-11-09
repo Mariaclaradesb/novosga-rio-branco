@@ -36,11 +36,11 @@ Substitua endereço/e-mail e ajuste guichês/salas. Os comandos de implantação
 
 O comando `preparar` cria `.env` e `credenciais.json` privados na VM. Eles não estão neste repositório e não devem ser commitados. A senha inicial de `admin` fica em `ADMIN_PASSWORD`; as demais senhas e Client ID/Secret ficam em `credenciais.json`.
 
-No Mangati Painel, configure um app **NovoSGA V2.1+** com a URL HTTPS do servidor, usuário `painel` e os dados OAuth gerados. Selecione Laboratório Rio Branco e os serviços Recepção/Coleta. O vínculo da conta e do PC da TV acontece depois de o servidor estar online. [Tutorial oficial](https://mangati.com/posts/configurar-painel-novosga-parte-1/).
+No Mangati Painel, configure um app **NovoSGA V2.1+** com a URL do servidor, usuário `painel` e os dados OAuth gerados. Selecione Laboratório Rio Branco e os serviços **Atendimento / Retirada de Exames** cadastrados na unidade. O vínculo da conta e do PC da TV acontece depois de o servidor estar online. [Tutorial oficial](https://mangati.com/posts/configurar-painel-novosga-parte-1/).
 
 ## Totem e impressão
 
-O novo frontend Vercel oferece os botões Normal/Prioritário, emissão pela API NovoSGA e impressão pelo navegador. A autorização é feita por equipamento; senha do NovoSGA e Client Secret ficam no servidor Vercel. O módulo de Triagem integrado ao NovoSGA continua disponível como alternativa operacional para a equipe. A Elgin usa o driver instalado no Windows; o modelo exato ainda precisa ser confirmado. A integração real com Oracle, impressão e chamada na TV precisa ser homologada. Veja [VERCEL.md](VERCEL.md) e [TOTEM-E-TV.md](TOTEM-E-TV.md).
+O frontend Vercel oferece **Atendimento** e **Retirada de Exames** lado a lado. Cada opção abre um popup para escolher **Normal** ou **Preferencial**, antes de emitir pela API NovoSGA e imprimir pelo navegador. Os serviços ativos são resolvidos pelo nome na unidade; a autorização é feita por equipamento, e senha do NovoSGA e Client Secret ficam no servidor Vercel. O módulo de Triagem integrado ao NovoSGA continua disponível como alternativa operacional para a equipe. A Elgin usa o driver instalado no Windows; o modelo exato ainda precisa ser confirmado. A integração real com Oracle, impressão e chamada na TV precisa ser homologada. Veja [VERCEL.md](VERCEL.md) e [TOTEM-E-TV.md](TOTEM-E-TV.md).
 
 ## Documentação e origem
 

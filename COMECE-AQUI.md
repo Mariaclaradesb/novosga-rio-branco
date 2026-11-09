@@ -41,7 +41,7 @@ No [Mangati Painel](https://painel.mangati.com/apps/), crie o app **NovoSGA V2.1
 | Senha | Usuário `painel` em `credenciais.json` |
 | Client ID / Client Secret | Seção `mangati` de `credenciais.json` |
 | Unidade | Laboratório Rio Branco |
-| Serviços | Recepção e Coleta |
+| Serviços | Atendimento e Retirada de Exames, conforme os cadastros ativos da unidade |
 
 Crie o painel com senha em destaque, histórico e áudio; associe o PC da TV à conta. O cadastro e o vínculo do dispositivo precisam ser feitos nessa conta após o servidor estar online. [Tutorial oficial](https://mangati.com/posts/configurar-painel-novosga-parte-1/).
 

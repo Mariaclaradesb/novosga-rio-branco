@@ -1,6 +1,6 @@
 # Totem Windows, postos e TV
 
-O frontend para o totem está em `frontend` e pode ser publicado na Vercel conforme [VERCEL.md](VERCEL.md). Ele oferece somente as opções de emissão Normal/Prioritário para Recepção e impressão, sem formulário de dados de pacientes. As instruções abaixo para o módulo Triagem descrevem a alternativa operacional integrada ao backend.
+O frontend para o totem está em `frontend` e pode ser publicado na Vercel conforme [VERCEL.md](VERCEL.md). Ele mostra **Atendimento** e **Retirada de Exames** lado a lado e abre um popup **Normal / Preferencial** ao escolher qualquer serviço, sem formulário de dados de pacientes. A impressão identifica o serviço escolhido. Os dois cadastros precisam estar ativos e vinculados à unidade; os operadores e o app do Mangati também precisam incluir as duas filas. As instruções abaixo para o módulo Triagem descrevem a alternativa operacional integrada ao backend e o fluxo inicial de Recepção/Coleta do instalador.
 
 ## Postos de atendimento
 

@@ -31,7 +31,7 @@ O arquivo `frontend/vercel.json` já define o comando de build e a saída. Não 
 
 Pode deixar **Environment Variables** vazio nessa primeira publicação. Clique em **Deploy** e aguarde **Ready**.
 
-Abra **Visit**. A Vercel fornecerá uma URL terminada em `.vercel.app`; use a URL efetivamente exibida, pois o nome depende de disponibilidade e da conta. A página deve mostrar **Laboratório Rio Branco**, as opções Normal/Prioritário e a mensagem de emissão ainda não ativada. Os botões de emissão permanecem desativados.
+Abra **Visit**. A Vercel fornecerá uma URL terminada em `.vercel.app`; use a URL efetivamente exibida, pois o nome depende de disponibilidade e da conta. A página deve mostrar **Laboratório Rio Branco**, as opções **Atendimento** e **Retirada de Exames** lado a lado e a mensagem de emissão ainda não ativada. Depois de ativar, tocar em um serviço abre a escolha **Normal / Preferencial**; somente essa confirmação emite uma senha.
 
 Esta etapa publica a interface. Para emitir senhas reais, conclua a configuração abaixo depois que a Oracle estiver online.
 
@@ -48,7 +48,7 @@ Depois de publicar o backend pelo [guia Oracle](COMECE-AQUI.md), abra o projeto 
 | `SGA_USERNAME` | `totem` |
 | `SGA_PASSWORD` | Senha do usuário `totem` em `credenciais.json` |
 | `SGA_UNIT_ID` | ID da unidade Laboratório Rio Branco no NovoSGA |
-| `SGA_SERVICE_ID` | ID do serviço Recepção |
+| `SGA_SERVICE_ID` | ID do Atendimento ou da antiga Recepção, mantido para compatibilidade |
 | `SGA_NORMAL_PRIORITY_ID` | ID da prioridade Normal |
 | `SGA_PRIORITY_ID` | ID da prioridade Prioridade |
 | `KIOSK_ACCESS_CODE` | Código forte, aleatório, com pelo menos 16 caracteres, guardado pela equipe |
@@ -71,6 +71,12 @@ Caso esta VM tenha sido instalada por outro método, crie o cliente OAuth em `ht
 
 Os IDs são os números exibidos nos cadastros da instalação; **não presuma que todos serão 1**. Na VM, o marcador `metadata` de namespace `riobranco`, nome `instalacao.v1`, também guarda os IDs de unidade e serviços após a instalação.
 
+### Atendimento e Retirada de Exames
+
+Cadastre os dois serviços com esses nomes e mantenha ambos ativos e vinculados à unidade do laboratório. A função Vercel consulta `/api/unidades/{id}/servicos` e resolve os IDs reais pelo nome antes de emitir; diferenças de maiúsculas ou acentos são normalizadas. Não é necessário adicionar uma variável de ambiente para a Retirada de Exames. O navegador envia somente a opção `atendimento` ou `retirada`, e os IDs são escolhidos no servidor.
+
+Enquanto a antiga Recepção não tiver sido renomeada, seu ID em `SGA_SERVICE_ID` continua funcionando como Atendimento. Retirada de Exames nunca é mapeada automaticamente para Coleta. Se um serviço estiver ausente, inativo ou com nome duplicado, nenhuma senha será emitida para essa opção. O serviço escolhido aparece na confirmação e no comprovante impresso.
+
 Para gerar os dois segredos no PowerShell do seu computador, execute duas vezes e guarde cada resultado em sua variável correspondente:
 
 ```powershell
@@ -87,7 +93,7 @@ Após salvar as variáveis, vá a **Deployments → último deploy → Redeploy*
 2. Clique em **Ativar este totem**, abaixo das opções de atendimento, e digite o valor de `KIOSK_ACCESS_CODE`. Se houver falha na consulta inicial, **Tentar novamente** refaz somente a consulta de conexão, sem emitir senhas.
 3. A aplicação confere a autenticação no NovoSGA antes de autorizar o equipamento. A autorização fica salva no navegador e se renova automaticamente ao abrir a tela ou emitir uma senha, sem reativação mensal durante o uso normal. Ativações anteriores que ainda estejam válidas passam a ser renovadas automaticamente ao acessar a tela. Não use navegação anônima se precisar preservá-la.
 4. Instale o driver Elgin correto e escolha a impressora térmica padrão do Windows. Configure largura e corte conforme o modelo.
-5. Emita uma senha de teste. O número vem do NovoSGA e a impressão usa o navegador. A opção **Imprimir novamente** reaproveita o número emitido, sem gerar outra senha.
+5. Escolha **Atendimento** ou **Retirada de Exames** e, no popup, **Normal** ou **Preferencial**. **Voltar** cancela a escolha sem emitir. Teste as quatro combinações: o número vem do NovoSGA e a impressão usa o navegador. A opção **Imprimir novamente** reaproveita o número emitido, sem gerar outra senha.
 6. Para impressão sem caixa de diálogo, teste depois o Chrome em perfil dedicado com `--kiosk-printing`. O modelo Elgin e a impressão real ainda precisam ser homologados.
 
 O cookie e a autorização assinada no servidor vencem 30 dias após o último uso autenticado. Cada acesso à tela e cada emissão com autorização válida renovam ambos os prazos sem pedir o código. Se ficar 30 dias sem usar o sistema, o navegador apagar o cookie ou a equipe mudar `KIOSK_ACCESS_CODE` ou `COOKIE_SECRET`, será preciso autorizar novamente. Fechar o navegador, reiniciar o computador e publicar atualizações preservam a autorização enquanto o cookie válido e os segredos forem mantidos.
@@ -98,7 +104,9 @@ Em falha de comunicação durante uma emissão, a tela bloqueia novas emissões 
 
 Configure o Mangati conforme o [guia principal](COMECE-AQUI.md), apontando para a URL **do backend Oracle**, com o usuário `painel`. A URL `.vercel.app` é usada pelo totem; ela não substitui a URL da API NovoSGA no Mangati.
 
-Emita pelo totem, chame na recepção e confira número, guichê e áudio na TV. Depois teste encaminhamento para coleta e a chamada da sala.
+No app e nos widgets do Mangati, selecione os serviços **Atendimento** e **Retirada de Exames**, usando os IDs efetivos dos cadastros. Vincule os operadores responsáveis às duas filas no NovoSGA.
+
+Emita pelo totem e confira número, serviço, guichê e áudio na TV ao chamar tanto Atendimento quanto Retirada de Exames.
 
 ## Se aparecer erro
 

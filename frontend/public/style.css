@@ -7,3 +7,15 @@
 .notice .staff-link{min-height:44px;padding:10px 14px;border:1px solid #bfd1c3;border-radius:9px;color:var(--brand);font-size:12px;font-weight:550}
 dialog:not([open]){display:none}
 dialog.fallback-dialog[open]{display:block;position:fixed;top:50%;left:50%;margin:0;transform:translate(-50%,-50%);z-index:10;max-height:calc(100vh - 40px);overflow:auto;background:#fff;box-shadow:0 0 0 100vmax #19302766}
+.priority-dialog{max-width:570px}
+.priority-dialog h2{margin:18px 0 10px}
+.priority-dialog>p{margin:0 0 24px}
+.priority-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.priority-option{min-height:146px;padding:24px 16px;border:1px solid #bfd1c3;border-radius:15px;text-align:left;transition:box-shadow .2s,transform .2s}
+.priority-option strong{display:block;font-size:clamp(17px,3vw,24px);font-weight:550;letter-spacing:-.4px}
+.priority-option small{display:block;margin-top:12px;font-size:12px;line-height:1.6;opacity:.85}
+.priority-option:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 24px #043b241a}
+.priority-option:disabled{opacity:.6}
+.priority-dialog .dialog-actions{justify-content:flex-start}
+.ticket-preview>span{text-transform:uppercase}
+@media(max-width:420px){.priority-dialog{padding:22px}.priority-options{gap:10px}.priority-option{padding:20px 12px}.priority-option small{font-size:11px}}

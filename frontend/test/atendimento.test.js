@@ -7,10 +7,14 @@ const environment = () => ({ NODE_ENV: 'production', SGA_BASE_URL: 'https://sga.
   SGA_CLIENT_ID: 'cliente-teste', SGA_CLIENT_SECRET: 'segredo-apenas-no-servidor', SGA_USERNAME: 'totem',
   SGA_PASSWORD: 'senha-apenas-no-servidor', SGA_UNIT_ID: '3', SGA_SERVICE_ID: '8', SGA_NORMAL_PRIORITY_ID: '1',
   SGA_PRIORITY_ID: '2', KIOSK_ACCESS_CODE: 'codigo-teste-forte-123456', COOKIE_SECRET: 'segredo-teste-cookies-com-mais-de-32-caracteres' });
-function backend(calls, ticket = { id: 24, senha: { format: 'R024' } }) {
+function backend(calls, ticket = { id: 24, senha: { format: 'R024' } }, catalog = [
+  { ativo: true, servico: { id: 8, nome: 'Atendimento', ativo: true } },
+  { ativo: true, servico: { id: 9, nome: 'Retirada de Exames', ativo: true } },
+]) {
   return async (url, options) => {
     calls.push({ url, options });
     if (url.endsWith('/api/token')) return new Response(JSON.stringify({ access_token: 'token-so-no-servidor', expires_in: 3600 }));
+    if (url.endsWith('/servicos')) return new Response(JSON.stringify(catalog));
     return new Response(JSON.stringify(ticket), { status: 201 });
   };
 }
@@ -62,8 +66,9 @@ test('HTTP explicito aceita IP e porta e preserva cookie HTTPS e escopo da emiss
   const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority: 'normal', csrf: auth.csrf } });
   assert.equal(result.status, 201);
   assert.equal(calls[0].url, 'http://198.51.100.42:8088/api/token');
-  assert.equal(calls[1].url, 'http://198.51.100.42:8088/api/distribui');
-  assert.deepEqual(JSON.parse(calls[1].options.body), { unidade: 3, servico: 8, prioridade: 1 });
+  assert.equal(calls[1].url, 'http://198.51.100.42:8088/api/unidades/3/servicos');
+  assert.equal(calls[2].url, 'http://198.51.100.42:8088/api/distribui');
+  assert.deepEqual(JSON.parse(calls[2].options.body), { unidade: 3, servico: 8, prioridade: 1 });
 });
 
 test('permissao HTTP nao aceita outros protocolos nem ativacao ambigua', async () => {
@@ -107,21 +112,92 @@ test('cookie ausente ou CSRF incorreto impedem emissao', async () => {
   assert.equal(calls.length, 1);
 });
 
-for (const [priority, id] of [['normal', 1], ['priority', 2]]) {
-  test(`emissao ${priority} usa somente unidade, servico e prioridade autorizados`, async () => {
+for (const [service, serviceId, name] of [['atendimento', 8, 'Atendimento'], ['retirada', 9, 'Retirada de Exames']]) {
+  for (const [priority, id] of [['normal', 1], ['priority', 2]]) test(`emissao ${service} ${priority} usa somente unidade, servico e prioridade autorizados`, async () => {
     const env = environment(); const calls = []; const handler = createHandler({ env, request: backend(calls) });
     const auth = await authorize(handler, env);
-    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', priority, csrf: auth.csrf, unidade: 999, servico: 999, cliente: { nome: 'nao transmitir' } } });
+    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie, data: { action: 'emit', service, priority, csrf: auth.csrf, unidade: 999, servico: 999, cliente: { nome: 'nao transmitir' } } });
     assert.equal(result.status, 201);
     assert.equal(result.body.number, 'R024');
+    assert.equal(result.body.service, name);
+    assert.equal(result.body.priority, priority === 'normal' ? 'Normal' : 'Preferencial');
     assert.match(result.headers['Set-Cookie'], /; Max-Age=2592000;/);
     assert.equal(cookieData(result.headers['Set-Cookie']).csrf, auth.csrf);
-    assert.deepEqual(JSON.parse(calls[1].options.body), { unidade: 3, servico: 8, prioridade: id });
-    assert.equal(calls[1].options.headers.Authorization, 'Bearer token-so-no-servidor');
+    assert.deepEqual(JSON.parse(calls[2].options.body), { unidade: 3, servico: serviceId, prioridade: id });
+    assert.equal(calls[2].options.headers.Authorization, 'Bearer token-so-no-servidor');
     assert.equal(JSON.stringify(result).includes('token-so-no-servidor'), false);
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
   });
 }
+
+test('servico arbitrario ou ID enviado pelo navegador nao acessa outra fila', async () => {
+  const env = environment(); const calls = []; const handler = createHandler({ env, request: backend(calls) });
+  const auth = await authorize(handler, env);
+  for (const service of ['coleta', '9', 9, '__proto__', null, {}]) {
+    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie,
+      data: { action: 'emit', service, priority: 'normal', csrf: auth.csrf } });
+    assert.equal(result.status, 400);
+    assert.equal(result.body.uncertain, false);
+  }
+  assert.equal(calls.length, 1);
+});
+
+test('os nomes cadastrados resolvem IDs reais sem presumir a numeracao dos servicos', async () => {
+  const env = environment(); const calls = [];
+  const catalog = [{ ativo: true, servico: { id: 17, nome: 'ATENDIMENTO', ativo: true } },
+    { ativo: true, servico: { id: 42, nome: ' Retirada de Exames ', ativo: true } }];
+  const handler = createHandler({ env, request: backend(calls, undefined, catalog) });
+  const auth = await authorize(handler, env);
+  for (const [service, id] of [['atendimento', 17], ['retirada', 42]]) {
+    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie,
+      data: { action: 'emit', service, priority: 'normal', csrf: auth.csrf } });
+    assert.equal(result.status, 201);
+    assert.equal(JSON.parse(calls.at(-1).options.body).servico, id);
+  }
+});
+
+test('servico ausente, inativo ou ambiguo nao emite senha nem usa Coleta como retirada', async () => {
+  const env = environment();
+  const exam = { id: 9, nome: 'Retirada de Exames', ativo: true };
+  for (const catalog of [[], [{ ativo: false, servico: exam }],
+    [{ ativo: true, servico: { ...exam, ativo: false } }],
+    [{ ativo: true, servico: { id: 9, nome: 'Coleta', ativo: true } }],
+    [{ ativo: true, servico: exam }, { ativo: true, servico: { ...exam, id: 10 } }]]) {
+    const calls = []; const handler = createHandler({ env, request: backend(calls, undefined, catalog) });
+    const auth = await authorize(handler, env);
+    const result = await invoke(handler, { method: 'POST', cookie: auth.cookie,
+      data: { action: 'emit', service: 'retirada', priority: 'normal', csrf: auth.csrf } });
+    assert.equal(result.status, 503);
+    assert.equal(result.body.uncertain, false);
+    assert.equal(calls.filter(call => call.url.endsWith('/api/distribui')).length, 0);
+  }
+});
+
+test('fila legada de Recepcao configurada continua funcionando como Atendimento', async () => {
+  const env = environment(); const calls = [];
+  const handler = createHandler({ env, request: backend(calls, undefined,
+    [{ ativo: true, servico: { id: 8, nome: 'Recepção', ativo: true } }]) });
+  const auth = await authorize(handler, env);
+  const result = await invoke(handler, { method: 'POST', cookie: auth.cookie,
+    data: { action: 'emit', priority: 'normal', csrf: auth.csrf } });
+  assert.equal(result.status, 201);
+  assert.equal(result.body.service, 'Atendimento');
+  assert.equal(JSON.parse(calls[2].options.body).servico, 8);
+});
+
+test('falha ao consultar os servicos encerra antes de enviar uma emissao', async () => {
+  const env = environment(); const calls = []; const normal = backend(calls);
+  const handler = createHandler({ env, request: async (url, options) => {
+    if (url.endsWith('/servicos')) { calls.push({ url, options }); return new Response('{}', { status: 503 }); }
+    return normal(url, options);
+  } });
+  const auth = await authorize(handler, env);
+  const result = await invoke(handler, { method: 'POST', cookie: auth.cookie,
+    data: { action: 'emit', service: 'retirada', priority: 'normal', csrf: auth.csrf } });
+  assert.equal(result.status, 503);
+  assert.equal(result.body.uncertain, false);
+  assert.equal(calls.filter(call => call.url.endsWith('/api/distribui')).length, 0);
+});
 
 test('falha apos envio nao repete a emissao e sinaliza resultado incerto', async () => {
   const env = environment(); let emissions = 0; const normal = backend([]);
