@@ -85,7 +85,7 @@ function cancelService() {
 }
 
 function reset() { clearTimeout(resetTimer); selectedService = null; closeDialog('priority-selection'); $('receipt').hidden = true; $('welcome').hidden = false; render(); }
-function printTicket() { clearTimeout(resetTimer); window.print(); resetTimer = setTimeout(reset, 10000); }
+function printTicket() { clearTimeout(resetTimer); window.print(); resetTimer = setTimeout(reset, 5000); }
 async function issue(priority) {
   if (busy || locked || !state.authorized || selectedService === null) return;
   const service = selectedService;
